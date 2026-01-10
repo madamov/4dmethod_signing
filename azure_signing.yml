@@ -1,0 +1,50 @@
+name: Azure signing in Windows runner
+
+on:
+  workflow_dispatch:
+    branches:
+       - main
+jobs:
+  get-and-sign:
+    runs-on: windows-latest
+    name: Sign application using Azure Trusted Signing
+    env: 
+        MY_APP_PATH : ${{ github.workspace }}\myapp
+        BINARIES_USER: ${{ secrets.BINARIES_USER }}
+        BINARIES_PASSWORD: ${{ secrets.BINARIES_PASSWORD }}
+  
+    steps:
+
+      - name: Download application file to sign
+        run: |
+           mkdir %MY_APP_PATH%
+           curl -f -u %BINARIES_USER%:%BINARIES_PASSWORD% -o %MY_APP_PATH%\mikitest.exe "https://binaries.4d.rs/mikitest.exe"
+        shell: cmd
+
+      - name: Check file exists and is not empty
+        run: |
+          if not exist %MY_APP_PATH%\mikitest.exe exit /b 1
+          for %%F in (%MY_APP_PATH%\mikitest.exe) do if %%~zF==0 exit /b 1
+        shell: cmd
+        
+      - name: Sign files with Trusted Signing
+        uses: azure/trusted-signing-action@v0
+        with:
+          azure-tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          azure-client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          azure-client-secret: ${{ secrets.AZURE_CLIENT_SECRET }}
+          endpoint: ${{ secrets.AZURE_ENDPOINT }}
+          trusted-signing-account-name: ${{ secrets.AZURE_ACCOUNT_NAME }}
+          certificate-profile-name: ${{ secrets.AZURE_CERTIFICATE_PROFILE_NAME }}
+          files-folder: ${{ env.MY_APP_PATH }}
+          files-folder-recurse: true
+          file-digest: SHA256
+          timestamp-rfc3161: http://timestamp.acs.microsoft.com
+          timestamp-digest: SHA256
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: mytestapp.exe
+          path: ${{ github.workspace }}\myapp\mikitest.exe
+
