@@ -16,7 +16,8 @@ jobs:
 
       - name: Get app to sign
         run: |
-           curl -f -u %BINARIES_USER%:%BINARIES_PASSWORD% -o $HOME/Documents/EFB_Financials_unsigned.zip "https://binaries.4d.rs/EFB_Financials_unsigned.zip"
+           myurl=$(echo "https://binaries.4d.rs/EFB_Financials_unsigned.zip" | sed 's/https:\/\//&'"$BINARIES_USER:$BINARIES_PASSWORD@/")
+           curl -f -u %BINARIES_USER%:%BINARIES_PASSWORD% -o $HOME/Documents/EFB_Financials_unsigned.zip $myurl
            mkdir $HOME/Documents/MyApp
            unzip -q $HOME/Documents/EFB_Financials_unsigned.zip -d $HOME/Documents/MyApp
 
