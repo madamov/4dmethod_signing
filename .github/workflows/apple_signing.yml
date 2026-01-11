@@ -55,7 +55,8 @@ jobs:
           APP_SPECIFIC_PASSWORD: ${{ secrets.MY_APP_SPECIFIC_PASSWORD }}
         run: |
 
-               xcrun notarytool list-profiles --keychain "${{ env.KEYCHAIN_PATH }}"
+               # xcrun notarytool list-profiles --keychain "${{ env.KEYCHAIN_PATH }}"
+               pwd
 
       - name: Sign application
         env: 
