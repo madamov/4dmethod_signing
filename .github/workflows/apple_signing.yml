@@ -54,8 +54,8 @@ jobs:
           TEAM_ID: ${{ secrets.MY_TEAM_ID }}
           APP_SPECIFIC_PASSWORD: ${{ secrets.MY_APP_SPECIFIC_PASSWORD }}
         run: |
-
-               xcrun notarytool store-credentials myApp_profile --apple-id "$MY_APPLE_ID" --team-id "$MY_TEAM_ID" --password "$MY_APP_SPECIFIC_PASSWORD"
+               TEAM_ID="JZ5A5UZ7M5"
+               xcrun notarytool store-credentials myApp_profile --apple-id "$APPLE_ID" --team-id "$TEAM_ID" --password "$APP_SPECIFIC_PASSWORD"
 
       - name: Sign application
         env: 
