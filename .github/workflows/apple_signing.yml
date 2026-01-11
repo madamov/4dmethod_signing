@@ -68,23 +68,26 @@ jobs:
 
       - name: Notarization
         run: |
-          xcrun notarytool submit $HOME/Documents/EFB.dmg --keychain-profile myApp_profile --output-format json >> $HOME/Documents/notarization.json
-          status=$(jq -r '.status' $HOME/Documents/notarization.json)
-          if [[ $status == *"Accepted"* ]]; then
-            id=$(jq -r '.id' $HOME/Documents/notarization.json)
-            echo "Stapling image $HOME/Documents/EFB.dmg notarizing id is $id"
-            xcrun stapler staple $HOME/Documents/EFB.dmg
-          fi
+          xcrun notarytool submit $HOME/Documents/EFB.dmg --keychain-profile myApp_profile
+          xcrun stapler staple $HOME/Documents/EFB.dmg
+
+          # xcrun notarytool submit $HOME/Documents/EFB.dmg --keychain-profile myApp_profile --output-format json >> $HOME/Documents/notarization.json
+          #status=$(jq -r '.status' $HOME/Documents/notarization.json)
+          #if [[ $status == *"Accepted"* ]]; then
+          #  id=$(jq -r '.id' $HOME/Documents/notarization.json)
+          #  echo "Stapling image $HOME/Documents/EFB.dmg notarizing id is $id"
+          #  xcrun stapler staple $HOME/Documents/EFB.dmg
+          #fi
           
       - name: Upload DMG
         uses: actions/upload-artifact@v4
         with:
           name: EFB.dmg
-          path: $HOME/Documents/EFB.dmg
+          path: /Users/runner/Documents/EFB.dmg
 
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
           name: notarization.json
-          path: $HOME/Documents/notarization.json
+          path: /Users/runner/Documents/notarization.json
           
