@@ -55,12 +55,6 @@ jobs:
           APP_SPECIFIC_PASSWORD: ${{ secrets.MY_APP_SPECIFIC_PASSWORD }}
         run: |
 
-               xcrun notarytool store-credentials myApp_profile \
-               --apple-id "$APPLE_ID" \
-               --team-id "$TEAM_ID" \
-               --password "$APP_SPECIFIC_PASSWORD" \
-               --keychain "${{ env.KEYCHAIN_PATH }}"
-
                xcrun notarytool list-profiles --keychain "${{ env.KEYCHAIN_PATH }}"
 
       - name: Sign application
@@ -76,9 +70,18 @@ jobs:
           ls -al $HOME/Documents/
 
       - name: Notarization
+        env:
+          APPLE_ID: ${{ secrets.MY_APPLE_ID }}
+          TEAM_ID: ${{ secrets.MY_TEAM_ID }}
+          APP_SPECIFIC_PASSWORD: ${{ secrets.MY_APP_SPECIFIC_PASSWORD }}
         run: |
           
-          xcrun notarytool submit $HOME/Documents/EFB.dmg --keychain-profile myApp_profile --wait --output-format json >> $HOME/Documents/notarization.json
+          #xcrun notarytool submit $HOME/Documents/EFB.dmg --keychain-profile myApp_profile --wait --output-format json >> $HOME/Documents/notarization.json
+
+          xcrun notarytool submit "$HOME/Documents/EFB.dmg" \
+          --apple-id "$APPLE_ID" --team-id "$TEAM_ID" --password "$APP_SPECIFIC_PASSWORD" \
+          --wait --output-format json > $HOME/Documents/notarization.json
+  
           id=$(jq -r '.id' $HOME/Documents/notarization.json)
 
           status=$(jq -r '.status' $HOME/Documents/notarization.json)
