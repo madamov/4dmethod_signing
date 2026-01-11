@@ -20,6 +20,7 @@ jobs:
            curl -f -o $HOME/Documents/EFB_Financials_unsigned.zip $myurl
            mkdir $HOME/Documents/MyApp
            unzip -q $HOME/Documents/EFB_Financials_unsigned.zip -d $HOME/Documents/MyApp
+           ls -alR $HOME/Documents/
 
 
       - name: Install Apple signing certificate
@@ -63,6 +64,7 @@ jobs:
       - name: Create DMG
         run: |
           hdiutil create -verbose -volname "EFB_Financials" -format UDBZ -srcfolder $HOME/Documents/MyApp/ $HOME/Documents/EFB.dmg
+          ls -al $HOME/Documents/
 
       - name: Notarization
         run: |
@@ -74,9 +76,15 @@ jobs:
             xcrun stapler staple $HOME/Documents/EFB.dmg
           fi
           
+      - name: Upload DMG
+        uses: actions/upload-artifact@v4
+        with:
+          name: EFB.dmg
+          path: $HOME/Documents/EFB.dmg
+
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: efb.dmg
-          path: $HOME/Documents/EFB.dmg
-
+          name: notarization.json
+          path: $HOME/Documents/notarization.json
+          
