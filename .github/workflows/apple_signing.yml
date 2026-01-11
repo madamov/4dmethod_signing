@@ -1,0 +1,81 @@
+name: Apple signing in macOS runner
+
+on:
+  workflow_dispatch:
+    branches:
+       - main
+jobs:
+  get-and-sign:
+    runs-on: macos-latest
+    name: Sign application using Apple tools
+    env: 
+        BINARIES_USER: ${{ secrets.BINARIES_USER }}
+        BINARIES_PASSWORD: ${{ secrets.BINARIES_PASSWORD }}
+
+    steps:
+
+      - name: Get app to sign
+        run: |
+           curl -f -u %BINARIES_USER%:%BINARIES_PASSWORD% -o $HOME/Documents/EFB_Financials_unsigned.zip "https://binaries.4d.rs/EFB_Financials_unsigned.zip"
+           mkdir $HOME/Documents/MyApp
+           unzip -q $HOME/Documents/EFB_Financials_unsigned.zip -d $HOME/Documents/MyApp
+
+
+      - name: Install Apple signing certificate
+        env:
+           APPLE_DEV_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE }}
+           APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+           KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+
+               CERTIFICATE_PATH=$RUNNER_TEMP/cxr.p12
+               KEYCHAIN_PATH=$RUNNER_TEMP/app-signing.keychain-db
+   
+               # import certificate from secrets
+               echo -n "$APPLE_DEV_CERTIFICATE_BASE64" | base64 --decode -o $CERTIFICATE_PATH
+   
+               # create temporary keychain
+               security create-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+               security set-keychain-settings -lut 21600 $KEYCHAIN_PATH
+               security unlock-keychain -p "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+   
+               # import certificate to keychain
+               security import $CERTIFICATE_PATH -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k $KEYCHAIN_PATH
+               security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" $KEYCHAIN_PATH
+               security list-keychain -d user -s $KEYCHAIN_PATH
+
+      - name: Create keychain profile for notarization
+        env:
+          APPLE_ID: ${{ secrets.MY_APPLE_ID }}
+          TEAM_ID: ${{ secrets.MY_TEAM_ID }}
+          APP_SPECIFIC_PASSWORD: ${{ secrets.MY_APP_SPECIFIC_PASSWORD }}
+        run: |
+
+               xcrun notarytool store-credentials myApp_profile --apple-id "$APPLE_ID" --team-id "$TEAM_ID" --password "$APP_SPECIFIC_PASSWORD"
+
+      - name: Sign application
+        env: 
+           CERTIFICATE_NAME: ${{ secrets.APPLE_CERTIFICATE_NAME }}
+        run: |
+          codesign --force --deep --options runtime --sign "$CERTIFICATE_NAME" $HOME/Documents/MyApp/EFB_Financials_unsigned.app
+
+      - name: Create DMG
+        run: |
+          hdiutil create -verbose -volname "EFB_Financials" -format UDBZ -srcfolder $HOME/Documents/MyApp/ $HOME/Documents/EFB.dmg
+
+      - name: Notarization
+        run: |
+          xcrun notarytool submit $HOME/Documents/EFB.dmg --keychain-profile myApp_profile --output-format json >> $HOME/Documents/notarization.json
+          status=$(jq -r '.status' $HOME/Documents/notarization.json)
+          if [[ $status == *"Accepted"* ]]; then
+            id=$(jq -r '.id' $HOME/Documents/notarization.json)
+            echo "Stapling image $HOME/Documents/EFB.dmg notarizing id is $id"
+            xcrun stapler staple $HOME/Documents/EFB.dmg
+          fi
+          
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: efb.dmg
+          path: $HOME/Documents/EFB.dmg
+
