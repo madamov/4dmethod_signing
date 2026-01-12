@@ -12,6 +12,7 @@ jobs:
     env:
       BINARIES_USER: ${{ secrets.BINARIES_USER }}
       BINARIES_PASSWORD: ${{ secrets.BINARIES_PASSWORD }}
+
     steps:
 
       - name: Print runner + tools
@@ -72,7 +73,8 @@ jobs:
           CERTIFICATE_NAME: ${{ secrets.APPLE_CERTIFICATE_NAME }}
         run: |
           set -euo pipefail
-          codesign --force --deep --options runtime --sign "$CERTIFICATE_NAME" "$HOME/Documents/MyApp/EFB_Financials_unsigned.app"
+          
+          ./sign4d.sh "$HOME/Documents/MyApp/EFB_Financials_unsigned.app" "$CERTIFICATE_NAME"
           echo "File signed. Verify signature:"
           codesign --verify --verbose=4 "$HOME/Documents/MyApp/EFB_Financials_unsigned.app" || true
           spctl -a -t exec -vv "$HOME/Documents/MyApp/EFB_Financials_unsigned.app" || true
@@ -83,6 +85,7 @@ jobs:
           hdiutil create -verbose -volname "EFB_Financials" -format UDBZ -srcfolder "$HOME/Documents/MyApp/" "$HOME/Documents/EFB.dmg"
           echo "DMG created: $HOME/Documents/EFB.dmg"
           ls -l "$HOME/Documents/EFB.dmg"
+          codesign --sign "$CERTIFICATE_NAME" "$HOME/Documents/EFB.dmg"
 
       - name: Check secrets length (helps detect trailing newline)
         env:
@@ -167,17 +170,17 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: notarization-log
-          path: $HOME/Documents/notarization-log.json
+          path: /Users/runner/Documents/notarization-log.json
 
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
         with:
           name: EFB.dmg
-          path: $HOME/Documents/EFB.dmg
+          path: /Users/runner//Documents/EFB.dmg
 
       - name: Upload notarization json
         uses: actions/upload-artifact@v4
         with:
           name: notarization.json
-          path: $HOME/Documents/notarization.json
+          path: /Users/runner//Documents/notarization.json
           
