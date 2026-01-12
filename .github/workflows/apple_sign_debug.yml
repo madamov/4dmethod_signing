@@ -88,7 +88,6 @@ jobs:
           hdiutil create -verbose -volname "EFB_Financials" -format UDBZ -srcfolder "$HOME/Documents/MyApp/" "$HOME/Documents/EFB.dmg"
           echo "DMG created: $HOME/Documents/EFB.dmg"
           ls -l "$HOME/Documents/EFB.dmg"
-          codesign --sign "$CERTIFICATE_NAME" "$HOME/Documents/EFB.dmg"
 
       - name: Check secrets length (helps detect trailing newline)
         env:
