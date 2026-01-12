@@ -1,0 +1,65 @@
+# One-step test: create a tiny app, zip it, and submit to notarytool using inline password.
+# Trigger: manual (workflow_dispatch)
+on:
+  workflow_dispatch:
+
+name: One-step Notary Submit Test
+
+jobs:
+  notary-submit-test:
+    runs-on: macos-latest
+    env:
+      APPLE_ID: ${{ secrets.MY_APPLE_ID }}
+      TEAM_ID: ${{ secrets.MY_TEAM_ID }}
+      APP_SPECIFIC_PASSWORD: ${{ secrets.MY_APP_SPECIFIC_PASSWORD }}
+    steps:
+      - name: Print runner and notarytool version
+        run: |
+          xcodebuild -version
+          xcrun notarytool --version || true
+
+      - name: Create tiny app bundle, zip it, and submit with inline password
+        run: |
+          set -euo pipefail
+          WORKDIR="$RUNNER_TEMP/notarytest"
+          rm -rf "$WORKDIR"
+          mkdir -p "$WORKDIR"
+          pushd "$WORKDIR"
+
+          echo "Creating minimal TestApp.app..."
+          mkdir -p TestApp.app/Contents/MacOS
+          # small executable
+          cat > TestApp.app/Contents/MacOS/test <<'EOF'
+          #!/bin/bash
+          echo "hello notary"
+          EOF
+          chmod +x TestApp.app/Contents/MacOS/test
+
+          # minimal Info.plist
+          cat > TestApp.app/Contents/Info.plist <<'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+          <plist version="1.0"><dict><key>CFBundleIdentifier</key><string>com.example.notarytest</string><key>CFBundleExecutable</key><string>test</string></dict></plist>
+          EOF
+
+          echo "Zipping TestApp.app -> TestApp.zip"
+          zip -rq TestApp.zip TestApp.app
+
+          echo "Submitting TestApp.zip to notarytool (inline password). This will fail with 401 if credentials are invalid."
+          # disable command echoing so the password isn't printed into logs
+          set +x
+          xcrun notarytool submit TestApp.zip \
+            --apple-id "$APPLE_ID" \
+            --team-id "$TEAM_ID" \
+            --password "$APP_SPECIFIC_PASSWORD" \
+            --wait --output-format json > notarization.json
+          EXIT_CODE=$?
+          set -x
+
+          echo "notarytool exit code: $EXIT_CODE"
+          echo "Notarization result (json):"
+          cat notarization.json || true
+
+          popd
+          echo "Artifact: $WORKDIR/notarization.json"
+          
