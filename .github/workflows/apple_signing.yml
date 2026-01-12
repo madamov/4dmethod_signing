@@ -47,16 +47,6 @@ jobs:
           security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
 
           echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
-          
-      - name: Create keychain profile for notarization
-        env:
-          APPLE_ID: ${{ secrets.MY_APPLE_ID }}
-          TEAM_ID: ${{ secrets.MY_TEAM_ID }}
-          APP_SPECIFIC_PASSWORD: ${{ secrets.MY_APP_SPECIFIC_PASSWORD }}
-        run: |
-
-               # xcrun notarytool list-profiles --keychain "${{ env.KEYCHAIN_PATH }}"
-               pwd
 
       - name: Sign application
         env: 
@@ -68,7 +58,6 @@ jobs:
       - name: Create DMG
         run: |
           hdiutil create -verbose -volname "EFB_Financials" -format UDBZ -srcfolder $HOME/Documents/MyApp/ $HOME/Documents/EFB.dmg
-          ls -al $HOME/Documents/
 
       - name: Notarization
         env:

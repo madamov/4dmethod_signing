@@ -1,0 +1,164 @@
+name: Apple signing in macOS runner (debug)
+
+on:
+  workflow_dispatch:
+    branches:
+      - main
+
+jobs:
+  get-and-sign:
+    runs-on: macos-latest
+    name: Sign application using Apple tools
+    env:
+      BINARIES_USER: ${{ secrets.BINARIES_USER }}
+      BINARIES_PASSWORD: ${{ secrets.BINARIES_PASSWORD }}
+    steps:
+
+      - name: Print runner + tools
+        run: |
+          xcodebuild -version
+          xcrun notarytool --version || true
+          sw_vers
+
+      - name: Get app to sign
+        run: |
+          set -euo pipefail
+          myurl=$(echo "https://binaries.4d.rs/EFB_Financials_unsigned.zip" | sed 's/https:\/\//&'"$BINARIES_USER:$BINARIES_PASSWORD@/")
+          curl -f -o "$HOME/Documents/EFB_Financials_unsigned.zip" "$myurl"
+          echo "File downloaded"
+          rm -rf "$HOME/Documents/MyApp"
+          mkdir -p "$HOME/Documents/MyApp"
+          unzip -q "$HOME/Documents/EFB_Financials_unsigned.zip" -d "$HOME/Documents/MyApp"
+          echo "File expanded"
+
+      - name: Install Apple signing certificate
+        env:
+          APPLE_DEV_CERTIFICATE_BASE64: ${{ secrets.APPLE_CERTIFICATE }}
+          APPLE_CERTIFICATE_PASSWORD: ${{ secrets.APPLE_CERTIFICATE_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          CERTIFICATE_PATH="$RUNNER_TEMP/cxr.p12"
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
+
+          echo -n "$APPLE_DEV_CERTIFICATE_BASE64" | base64 --decode -o "$CERTIFICATE_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          # Ensure the temp keychain and the system login keychain are both in the search list (full path)
+          security list-keychains -d user -s "$KEYCHAIN_PATH" "$HOME/Library/Keychains/login.keychain-db"
+          security default-keychain -s "$KEYCHAIN_PATH" || true
+
+          security import "$CERTIFICATE_PATH" -P "$APPLE_CERTIFICATE_PASSWORD" -A -t cert -f pkcs12 -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          echo "KEYCHAIN_PATH=$KEYCHAIN_PATH" >> "$GITHUB_ENV"
+          echo "Imported certificate to $KEYCHAIN_PATH"
+
+      - name: Verify signing identity exists
+        env:
+          CERTIFICATE_NAME: ${{ secrets.APPLE_CERTIFICATE_NAME }}
+        run: |
+          set -euo pipefail
+          echo "Looking for identity: $CERTIFICATE_NAME"
+          security find-identity -p codesigning -v
+          # show certificate subject lines
+          security find-certificate -a -c "$CERTIFICATE_NAME" -Z || true
+
+      - name: Sign application
+        env:
+          CERTIFICATE_NAME: ${{ secrets.APPLE_CERTIFICATE_NAME }}
+        run: |
+          set -euo pipefail
+          codesign --force --deep --options runtime --sign "$CERTIFICATE_NAME" "$HOME/Documents/MyApp/EFB_Financials_unsigned.app"
+          echo "File signed. Verify signature:"
+          codesign --verify --verbose=4 "$HOME/Documents/MyApp/EFB_Financials_unsigned.app" || true
+          spctl -a -t exec -vv "$HOME/Documents/MyApp/EFB_Financials_unsigned.app" || true
+
+      - name: Create DMG
+        run: |
+          set -euo pipefail
+          hdiutil create -verbose -volname "EFB_Financials" -format UDBZ -srcfolder "$HOME/Documents/MyApp/" "$HOME/Documents/EFB.dmg"
+          echo "DMG created: $HOME/Documents/EFB.dmg"
+          ls -l "$HOME/Documents/EFB.dmg"
+
+      - name: Check secrets length (helps detect trailing newline)
+        env:
+          APPLE_ID: ${{ secrets.MY_APPLE_ID }}
+          TEAM_ID: ${{ secrets.MY_TEAM_ID }}
+          APP_SPECIFIC_PASSWORD: ${{ secrets.MY_APP_SPECIFIC_PASSWORD }}
+        run: |
+          # Print lengths only (value masked in logs)
+          printf "APPLE_ID length: %s\n" "$(printf '%s' "$APPLE_ID" | wc -c)"
+          printf "TEAM_ID length: %s\n" "$(printf '%s' "$TEAM_ID" | wc -c)"
+          printf "APP_SPECIFIC_PASSWORD length: %s\n" "$(printf '%s' "$APP_SPECIFIC_PASSWORD" | wc -c)"
+          echo "If lengths are unexpected, re-save secrets without extra newline/space."
+
+      - name: Validate notary credentials (store-credentials)
+        env:
+          APPLE_ID: ${{ secrets.MY_APPLE_ID }}
+          TEAM_ID: ${{ secrets.MY_TEAM_ID }}
+          APP_SPECIFIC_PASSWORD: ${{ secrets.MY_APP_SPECIFIC_PASSWORD }}
+          KEYCHAIN_PASSWORD: ${{ secrets.KEYCHAIN_PASSWORD }}
+        run: |
+          set -euo pipefail
+          # Use the same temp keychain we created above to store the credential item
+          KEYCHAIN_PATH="$RUNNER_TEMP/app-signing.keychain-db"
+          echo "Ensure keychain in search list"
+          security list-keychains -d user -s "$KEYCHAIN_PATH" "$HOME/Library/Keychains/login.keychain-db"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH" || true
+
+          echo "Attempting to store-credentials (this will fail with 401 if credentials invalid)"
+          set +x
+          xcrun notarytool store-credentials ci_notary_profile --apple-id "$APPLE_ID" --team-id "$TEAM_ID" --password "$APP_SPECIFIC_PASSWORD"
+          RC=$?
+          set -x
+          echo "store-credentials exit code: $RC"
+          # Show that the generic password entry exists (non-fatal)
+          security find-generic-password -l "ci_notary_profile" -g "$KEYCHAIN_PATH" 2>&1 || true
+
+      - name: Notarization (submit DMG)
+        env:
+          APPLE_ID: ${{ secrets.MY_APPLE_ID }}
+          TEAM_ID: ${{ secrets.MY_TEAM_ID }}
+          APP_SPECIFIC_PASSWORD: ${{ secrets.MY_APP_SPECIFIC_PASSWORD }}
+        run: |
+          set -euo pipefail
+          # Try submitting using inline credentials (explicit), avoid relying on profiles
+          set +x
+          xcrun notarytool submit "$HOME/Documents/EFB.dmg" \
+            --apple-id "$APPLE_ID" \
+            --password "$APP_SPECIFIC_PASSWORD" \
+            --team-id "$TEAM_ID" \
+            --wait --output-format json > "$HOME/Documents/notarization.json"
+          RC=$?
+          set -x
+          echo "notarytool submit exit code: $RC"
+          cat "$HOME/Documents/notarization.json" || true
+
+          id=$(jq -r '.id' "$HOME/Documents/notarization.json" || echo "")
+          status=$(jq -r '.status' "$HOME/Documents/notarization.json" || echo "")
+          echo "Notarization id=$id status=$status"
+
+          if [[ "$status" == "Accepted" ]]; then
+            echo "Stapling image $HOME/Documents/EFB.dmg notarizing id is $id"
+            xcrun stapler staple "$HOME/Documents/EFB.dmg" || true
+          else
+            echo "Notarization not accepted, showing log:"
+            xcrun notarytool log "$id" || true
+          fi
+
+      - name: Upload DMG artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: EFB.dmg
+          path: $HOME/Documents/EFB.dmg
+
+      - name: Upload notarization json
+        uses: actions/upload-artifact@v4
+        with:
+          name: notarization.json
+          path: $HOME/Documents/notarization.json
+          
