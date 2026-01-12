@@ -150,6 +150,25 @@ jobs:
             xcrun notarytool log "$id" || true
           fi
 
+              # replace <ID> with the id from notarization.json; or use jq to extract it
+              NOTARY_ID=$(jq -r '.id' "$HOME/Documents/notarization.json")
+              
+              # fetch log using inline credentials and save to file
+              xcrun notarytool log "$NOTARY_ID" \
+                --apple-id "$APPLE_ID" \
+                --password "$APP_SPECIFIC_PASSWORD" \
+                --team-id "$TEAM_ID" \
+                --output-format json > "$HOME/Documents/notarization-log.json" || true
+              
+              # print a concise summary of issues
+              echo "Notarization log summary:"
+              jq '.issues[] | {severity: .severity, message: .message}' "$HOME/Documents/notarization-log.json" || true
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: notarization-log
+          path: $HOME/Documents/notarization-log.json
+
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
         with:
