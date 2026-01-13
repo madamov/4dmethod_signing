@@ -152,7 +152,6 @@ jobs:
             xcrun stapler staple "$HOME/Documents/EFB.dmg" || true
           else
             echo "Notarization not accepted, showing log:"
-            xcrun notarytool log "$id" || true
           fi
 
               # replace <ID> with the id from notarization.json; or use jq to extract it
