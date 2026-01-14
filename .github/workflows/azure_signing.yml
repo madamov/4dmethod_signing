@@ -46,7 +46,7 @@ jobs:
           files-folder: ${{ env.MY_APP_PATH }}\signMe\
           files-folder-recurse: true
           file-digest: SHA256
-          files-folder-filter: exe, dll
+          files-folder-filter: exe,dll
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
           timestamp-digest: SHA256
 
