@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no" ?>
+<Preferences4D>
+
+  <BuildApp>
+    <BuildCompiled>False</BuildCompiled>
+    <IncludeAssociatedFolders>True</IncludeAssociatedFolders>
+    <BuildComponent>False</BuildComponent>
+    <BuildApplicationSerialized>True</BuildApplicationSerialized>
+    <RuntimeVL>
+      <LastDataPathLookup>ByAppName</LastDataPathLookup>
+    </RuntimeVL>
+    <SourcesFiles>
+      <RuntimeVL>
+        <RuntimeVLIncludeIt>True</RuntimeVLIncludeIt>
+        <RuntimeVLMacFolder>Macintosh HD:Applications:4D 20.8:4D Volume Desktop.app:</RuntimeVLMacFolder>
+      </RuntimeVL>
+      <CS>
+        <ServerIncludeIt>False</ServerIncludeIt>
+        <ClientMacIncludeIt>False</ClientMacIncludeIt>
+        <ClientWinIncludeIt>False</ClientWinIncludeIt>
+      </CS>
+    </SourcesFiles>
+    <CS>
+      <BuildServerApplication>False</BuildServerApplication>
+      <LastDataPathLookup>ByAppName</LastDataPathLookup>
+      <MacCompiledDatabaseToWinIncludeIt>False</MacCompiledDatabaseToWinIncludeIt>
+      <MacCompiledDatabaseToWin></MacCompiledDatabaseToWin>
+      <ServerEmbedsProjectDirectoryFile>False</ServerEmbedsProjectDirectoryFile>
+      <BuildCSUpgradeable>False</BuildCSUpgradeable>
+      <CurrentVers>1</CurrentVers>
+      <HardLink></HardLink>
+    </CS>
+    <BuildApplicationName>signMe</BuildApplicationName>
+    <Licenses>
+      <EvaluationMode>False</EvaluationMode>
+      <ArrayLicenseMac>
+        <ItemsCount>2</ItemsCount>
+        <Item1>Radni:madamov:Library:Application Support:4D:Licenses:4DDP200UUS0016PRRW1077F.license4D</Item1>
+        <Item2>Radni:madamov:Library:Application Support:4D:Licenses:4UUD200UUS001BCNXZ021C5.license4D</Item2>
+      </ArrayLicenseMac>
+    </Licenses>
+    <BuildMacDestFolder>Radni:madamov:Documents_local:Dev:4D:4dmethod:builds:</BuildMacDestFolder>
+    <ArrayExcludedPluginName>
+      <ItemsCount>0</ItemsCount>
+    </ArrayExcludedPluginName>
+    <ArrayExcludedPluginID>
+      <ItemsCount>0</ItemsCount>
+    </ArrayExcludedPluginID>
+    <ArrayExcludedComponentName>
+      <ItemsCount>0</ItemsCount>
+    </ArrayExcludedComponentName>
+    <ArrayExcludedModuleName>
+      <ItemsCount>0</ItemsCount>
+    </ArrayExcludedModuleName>
+    <SignApplication>
+      <MacSignature>False</MacSignature>
+      <MacCertificate></MacCertificate>
+      <AdHocSign>True</AdHocSign>
+    </SignApplication>
+  </BuildApp>
+
+
+</Preferences4D>
