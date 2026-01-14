@@ -18,15 +18,22 @@ jobs:
       - name: Download application file to sign
         run: |
            mkdir %MY_APP_PATH%
-           curl -f -u %BINARIES_USER%:%BINARIES_PASSWORD% -o %MY_APP_PATH%\mikitest.exe "https://binaries.4d.rs/mikitest.exe"
+           curl -f -u %BINARIES_USER%:%BINARIES_PASSWORD% -o %MY_APP_PATH%\signMe.7z "https://binaries.4d.rs/signMe.7z"
         shell: cmd
 
       - name: Check file exists and is not empty
         run: |
-          if not exist %MY_APP_PATH%\mikitest.exe exit /b 1
-          for %%F in (%MY_APP_PATH%\mikitest.exe) do if %%~zF==0 exit /b 1
+          if not exist %MY_APP_PATH%\signMe.7z exit /b 1
+          for %%F in (%MY_APP_PATH%\v.7z) do if %%~zF==0 exit /b 1
         shell: cmd
-        
+
+      - name: Extract archive
+        run: |
+          mkdir %MY_APP_PATH%\signMe
+          7z x %MY_APP_PATH%\signMe.7z -o%MY_APP_PATH%\signMe
+
+        shell: cmd
+
       - name: Sign files with Trusted Signing
         uses: azure/trusted-signing-action@v0
         with:
@@ -36,7 +43,7 @@ jobs:
           endpoint: ${{ secrets.AZURE_ENDPOINT }}
           trusted-signing-account-name: ${{ secrets.AZURE_ACCOUNT_NAME }}
           certificate-profile-name: ${{ secrets.AZURE_CERTIFICATE_PROFILE_NAME }}
-          files-folder: ${{ env.MY_APP_PATH }}
+          files-folder: ${{ env.MY_APP_PATH }}\signMe\
           files-folder-recurse: true
           file-digest: SHA256
           timestamp-rfc3161: http://timestamp.acs.microsoft.com
@@ -45,6 +52,6 @@ jobs:
       - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: mytestapp.exe
-          path: ${{ github.workspace }}\myapp\mikitest.exe
+          name: signMeSigned.zip
+          path: ${{ github.workspace }}\myapp\signMe\
 
