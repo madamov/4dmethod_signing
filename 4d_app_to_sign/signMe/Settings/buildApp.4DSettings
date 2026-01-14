@@ -53,8 +53,8 @@
       <ItemsCount>0</ItemsCount>
     </ArrayExcludedModuleName>
     <SignApplication>
-      <MacSignature>False</MacSignature>
-      <MacCertificate></MacCertificate>
+      <MacSignature>True</MacSignature>
+      <MacCertificate>Developer ID Application: ADAMOV KONSULTACIJE DOO BEOGRAD (JZ5A5UZ7M5)</MacCertificate>
       <AdHocSign>True</AdHocSign>
     </SignApplication>
   </BuildApp>
