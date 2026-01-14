@@ -27,12 +27,12 @@ jobs:
       - name: Get app to sign
         run: |
           set -euo pipefail
-          myurl=$(echo "https://binaries.4d.rs/EFB_Financials_unsigned.zip" | sed 's/https:\/\//&'"$BINARIES_USER:$BINARIES_PASSWORD@/")
-          curl -f -o "$HOME/Documents/EFB_Financials_unsigned.zip" "$myurl"
+          myurl=$(echo "https://binaries.4d.rs/signMe.zip" | sed 's/https:\/\//&'"$BINARIES_USER:$BINARIES_PASSWORD@/")
+          curl -f -o "$HOME/Documents/signMe.zip" "$myurl"
           echo "File downloaded"
           rm -rf "$HOME/Documents/MyApp"
           mkdir -p "$HOME/Documents/MyApp"
-          unzip -q "$HOME/Documents/EFB_Financials_unsigned.zip" -d "$HOME/Documents/MyApp"
+          unzip -q "$HOME/Documents/signMe.zip" -d "$HOME/Documents/MyApp"
           echo "File expanded"
 
       - name: Install Apple signing certificate
@@ -77,17 +77,17 @@ jobs:
         run: |
           set -euo pipefail
           
-          ./sign4d.sh "$HOME/Documents/MyApp/EFB_Financials_unsigned.app" "$CERTIFICATE_NAME"
+          ./sign4d.sh "$HOME/Documents/MyApp/signMe.app" "$CERTIFICATE_NAME"
           echo "File signed. Verify signature:"
-          codesign --verify --verbose=4 "$HOME/Documents/MyApp/EFB_Financials_unsigned.app" || true
-          spctl -a -t exec -vv "$HOME/Documents/MyApp/EFB_Financials_unsigned.app" || true
+          codesign --verify --verbose=4 "$HOME/Documents/MyApp/signMe.app" || true
+          spctl -a -t exec -vv "$HOME/Documents/MyApp/signMe.app" || true
 
       - name: Create DMG
         run: |
           set -euo pipefail
-          hdiutil create -verbose -volname "EFB_Financials" -format UDBZ -srcfolder "$HOME/Documents/MyApp/" "$HOME/Documents/EFB.dmg"
-          echo "DMG created: $HOME/Documents/EFB.dmg"
-          ls -l "$HOME/Documents/EFB.dmg"
+          hdiutil create -verbose -volname "MySignedApp" -format UDBZ -srcfolder "$HOME/Documents/MyApp/" "$HOME/Documents/signMe.dmg"
+          echo "DMG created: $HOME/Documents/signMe.dmg"
+          ls -l "$HOME/Documents/signMe.dmg"
 
       - name: Check secrets length (helps detect trailing newline)
         env:
@@ -133,7 +133,7 @@ jobs:
           set -euo pipefail
           # Try submitting using inline credentials (explicit), avoid relying on profiles
           set +x
-          xcrun notarytool submit "$HOME/Documents/EFB.dmg" \
+          xcrun notarytool submit "$HOME/Documents/signMe.dmg" \
             --apple-id "$APPLE_ID" \
             --password "$APP_SPECIFIC_PASSWORD" \
             --team-id "$TEAM_ID" \
@@ -148,8 +148,8 @@ jobs:
           echo "Notarization id=$id status=$status"
 
           if [[ "$status" == "Accepted" ]]; then
-            echo "Stapling image $HOME/Documents/EFB.dmg notarizing id is $id"
-            xcrun stapler staple "$HOME/Documents/EFB.dmg" || true
+            echo "Stapling image $HOME/Documents/signMe.dmg notarizing id is $id"
+            xcrun stapler staple "$HOME/Documents/signMe.dmg" || true
           else
             echo "Notarization not accepted, showing log:"
           fi
@@ -176,8 +176,8 @@ jobs:
       - name: Upload DMG artifact
         uses: actions/upload-artifact@v4
         with:
-          name: EFB.dmg
-          path: /Users/runner//Documents/EFB.dmg
+          name: signMe.dmg
+          path: /Users/runner//Documents/signMe.dmg
 
       - name: Upload notarization json
         uses: actions/upload-artifact@v4
